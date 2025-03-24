@@ -26,6 +26,32 @@ class Pergunta(models.Model):
     secao = models.ForeignKey(Secao, on_delete=models.CASCADE, related_name='perguntas')
     pergunta = models.TextField()
     explicacao = models.TextField(blank=True)
+    ordemPerguntas = models.JSONField(default=list)
     
     def __str__(self):
         return f"{self.secao.titulo}: {self.pergunta[:50]}..."
+
+    def inserirPergunta(self, pergunta_id, posicao):
+        if posicao < 0 or posicao > len(self.ordemPerguntas):
+            raise ValueError("Posição inválida")
+
+        nova_ordem = (
+            self.ordemPerguntas[:posicao] + 
+            [pergunta_id] + 
+            self.ordemPerguntas[posicao:]
+        )
+        
+        self.ordemPerguntas = nova_ordem
+        self.save()
+    
+    def removerPergunta(self, posicao):
+        if posicao < 0 or posicao >= len(self.ordemPerguntas):
+            raise ValueError("Posição inválida")
+            
+        nova_ordem = (
+            self.ordemPerguntas[:posicao] + 
+            self.ordemPerguntas[posicao+1:]
+        )
+        
+        self.ordemPerguntas = nova_ordem
+        self.save()
