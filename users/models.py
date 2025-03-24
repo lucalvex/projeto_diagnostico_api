@@ -45,7 +45,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     cpf = models.CharField(max_length=14, unique=True)
     password = models.CharField(max_length=255)
     isActive = models.BooleanField(default=True)
-    dataRegistro models.DateTimeField(auto_now_add=True)
+    dataRegistro = models.DateTimeField(auto_now_add=True)
     dataDesativacao = models.DateTimeField(null=True, blank=True)
 
     is_staff = models.BooleanField(default=False)
