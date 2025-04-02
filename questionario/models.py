@@ -1,8 +1,9 @@
 from django.db import models
+from users.models import UserAccount
 
 class Relatorio(models.Model):
     data = models.DateTimeField(auto_now_add=True)
-    PATH = models.FileField(lenght=255)
+    PATH = models.FileField(max_length=255)
     
     def __str__(self):
         return f"Relatório {self.id} - {self.data.strftime('%Y-%m-%d')}"
@@ -18,13 +19,14 @@ class Secao(models.Model):
     titulo = models.CharField(max_length=255, primary_key=True)
     descricao = models.TextField()
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    ordemPerguntas = models.JSONField(default=list)
     
     def __str__(self):
         return self.titulo
 
 class RespostaSecao(models.Model):
-    usuario = models.ForeignKey('Usuario', on_delete=models.CASCADE)
-    secao = models.ForeignKey('Secao', on_delete=models.CASCADE)
+    usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    secao = models.ForeignKey(Secao, on_delete=models.CASCADE)
     valor_final = models.IntegerField(default=0)
     data_resposta = models.DateTimeField(auto_now=True)
     
@@ -34,41 +36,30 @@ class RespostaSecao(models.Model):
 
 class Pergunta(models.Model):
     secao = models.ForeignKey(Secao, on_delete=models.CASCADE, related_name='perguntas')
+    id_secao = models.PositiveIntegerField(default=0)
     pergunta = models.TextField()
     explicacao = models.TextField(blank=True)
-    ordemPerguntas = models.JSONField(default=list)
+
+    class Meta:
+        unique_together: ('secao', 'id_secao')
+        ordering = ['secao', 'id_secao']
     
+    def save(self, *args, **kwargs):
+        if not self.id_na_secao:
+            ultima_pergunta = Pergunta.objects.filter(secao=self.secao).order_by('-id_na_secao').first()
+            self.id_na_secao = ultima_pergunta.id_na_secao + 1 if ultima_pergunta else 1
+        super().save(*args, **kwargs)
+
+    @property
+    def codigo_completo(self):
+        return f"{self.secao.titulo[:1]}{self.id_na_secao}"
+
     def __str__(self):
-        return f"{self.secao.titulo}: {self.pergunta[:50]}..."
-
-    def inserirPergunta(self, pergunta_id, posicao):
-        if posicao < 0 or posicao > len(self.ordemPerguntas):
-            raise ValueError("Posição inválida")
-
-        nova_ordem = (
-            self.ordemPerguntas[:posicao] + 
-            [pergunta_id] + 
-            self.ordemPerguntas[posicao:]
-        )
-        
-        self.ordemPerguntas = nova_ordem
-        self.save()
-    
-    def removerPergunta(self, posicao):
-        if posicao < 0 or posicao >= len(self.ordemPerguntas):
-            raise ValueError("Posição inválida")
-            
-        nova_ordem = (
-            self.ordemPerguntas[:posicao] + 
-            self.ordemPerguntas[posicao+1:]
-        )
-        
-        self.ordemPerguntas = nova_ordem
-        self.save()
+        return f"{self.codigo_completo}: {self.pergunta[:50]}..."
 
 class RespostaPergunta(models.Model):
     resposta_secao = models.ForeignKey(RespostaSecao, on_delete=models.CASCADE, related_name='respostas')
-    pergunta = models.ForeignKey('Pergunta', on_delete=models.CASCADE)
+    pergunta = models.ForeignKey(Pergunta, on_delete=models.CASCADE)
     valor = models.IntegerField()
     
     class Meta:
