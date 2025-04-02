@@ -22,6 +22,16 @@ class Secao(models.Model):
     def __str__(self):
         return self.titulo
 
+class RespostaSecao(models.Model):
+    usuario = models.ForeignKey('Usuario', on_delete=models.CASCADE)
+    secao = models.ForeignKey('Secao', on_delete=models.CASCADE)
+    valor_final = models.IntegerField(default=0)
+    data_resposta = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('usuario', 'secao')
+        verbose_name_plural = 'Respostas das Seções'
+
 class Pergunta(models.Model):
     secao = models.ForeignKey(Secao, on_delete=models.CASCADE, related_name='perguntas')
     pergunta = models.TextField()
@@ -55,3 +65,12 @@ class Pergunta(models.Model):
         
         self.ordemPerguntas = nova_ordem
         self.save()
+
+class RespostaPergunta(models.Model):
+    resposta_secao = models.ForeignKey(RespostaSecao, on_delete=models.CASCADE, related_name='respostas')
+    pergunta = models.ForeignKey('Pergunta', on_delete=models.CASCADE)
+    valor = models.IntegerField()
+    
+    class Meta:
+        unique_together = ('resposta_secao', 'pergunta')
+        verbose_name_plural = 'Respostas das Perguntas'
