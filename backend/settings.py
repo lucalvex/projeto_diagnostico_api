@@ -171,5 +171,5 @@ EMAIL_USE_TLS = getenv('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER = getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = getenv('EMAIL_HOST_PASSWORD')
 
-DOMAIN = getenv('DOMAIN')
+DOMAIN = getenv('DOMAIN', 'http://localhost:8000')
 SITE_NAME = 'Projeto Diagnóstico'
