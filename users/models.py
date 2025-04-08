@@ -42,10 +42,10 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     nomeDeUsuario = models.CharField(max_length=255, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     cnpj = BRCNPJField(max_length=14, unique=True)
-    cpf = models.CharField(max_length=14, unique=True)
+    cpf = models.CharField(max_length=14, unique=True, default="00000000000")
     password = models.CharField(max_length=255)
     isActive = models.BooleanField(default=True)
-    dataRegistro = models.DateTimeField(auto_now_add=True)
+    dataRegistro = models.DateTimeField(default=timezone.now)
     dataDesativacao = models.DateTimeField(null=True, blank=True)
 
     is_staff = models.BooleanField(default=False)
