@@ -8,7 +8,17 @@ class Relatorio(models.Model):
     def __str__(self):
         return f"Relatório {self.id} - {self.data.strftime('%Y-%m-%d')}"
 
-class Secao(models.Model):
+class Modulo(models.Model):
+    id = models.AutoField(primary_key=True)
+    nome = models.CharField(max_length=255, unique=True)
+    descricao = models.TextField()
+    perguntasQntd = models.IntegerField(default=0)
+    tempo = models.IntegerField(default=0)  # minutos
+    
+    def __str__(self):
+        return self.nome
+
+class Dimensao(models.Model):
     TIPO_CHOICES = [
         ('OBRIGATORIO', 'Obrigatório'),
         ('COMERCIO', 'Comércio'),
@@ -16,52 +26,36 @@ class Secao(models.Model):
         ('INDUSTRIA', 'Indústria'),
     ]
     
-    titulo = models.CharField(max_length=255, primary_key=True)
+    id = models.AutoField(primary_key=True)
+    titulo = models.CharField(max_length=255, unique=True)
     descricao = models.TextField()
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    ordemPerguntas = models.JSONField(default=list)
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='dimensoes')
     
     def __str__(self):
         return self.titulo
 
-class RespostaSecao(models.Model):
+class RespostaDimensao(models.Model):
     usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
-    secao = models.ForeignKey(Secao, on_delete=models.CASCADE)
-    valor_final = models.IntegerField(default=0)
-    data_resposta = models.DateTimeField(auto_now=True)
+    valorFinal = models.IntegerField(default=0)
+    dataResposta = models.DateTimeField(auto_now=True)
+    dimensao = models.ForeignKey(Dimensao, on_delete=models.CASCADE, related_name='respostas', default=None)
     
     class Meta:
-        unique_together = ('usuario', 'secao')
-        verbose_name_plural = 'Respostas das Seções'
+        unique_together = ('usuario', 'dimensao')
+        verbose_name_plural = 'Respostas das Dimensões'
 
 class Pergunta(models.Model):
-    secao = models.ForeignKey(Secao, on_delete=models.CASCADE, related_name='perguntas')
-    id_secao = models.PositiveIntegerField(default=0)
+    id = models.AutoField(primary_key=True)
     pergunta = models.TextField()
     explicacao = models.TextField(blank=True)
-
-    class Meta:
-        unique_together: ('secao', 'id_secao')
-        ordering = ['secao', 'id_secao']
-    
-    def save(self, *args, **kwargs):
-        if not self.id_na_secao:
-            ultima_pergunta = Pergunta.objects.filter(secao=self.secao).order_by('-id_na_secao').first()
-            self.id_na_secao = ultima_pergunta.id_na_secao + 1 if ultima_pergunta else 1
-        super().save(*args, **kwargs)
-
-    @property
-    def codigo_completo(self):
-        return f"{self.secao.titulo[:1]}{self.id_na_secao}"
-
-    def __str__(self):
-        return f"{self.codigo_completo}: {self.pergunta[:50]}..."
+    dimensao = models.ForeignKey(Dimensao, on_delete=models.CASCADE, related_name='perguntas', default=None)
 
 class RespostaPergunta(models.Model):
-    resposta_secao = models.ForeignKey(RespostaSecao, on_delete=models.CASCADE, related_name='respostas')
+    respostaDimensao = models.ForeignKey(RespostaDimensao, on_delete=models.CASCADE, related_name='respostas', default=None)
     pergunta = models.ForeignKey(Pergunta, on_delete=models.CASCADE)
     valor = models.IntegerField()
     
     class Meta:
-        unique_together = ('resposta_secao', 'pergunta')
+        unique_together = ('respostaDimensao', 'pergunta')
         verbose_name_plural = 'Respostas das Perguntas'

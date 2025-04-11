@@ -1,11 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.http import JsonResponse
 from users.models import UserAccount
-from .models import Secao, Pergunta, RespostaSecao, RespostaPergunta
+from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaPergunta
+from django.shortcuts import get_object_or_404
 import json
 
 class QuestionarioView(APIView):
@@ -13,114 +14,147 @@ class QuestionarioView(APIView):
 
     def get(self, request):
         try:
-            secoes = Secao.objects.prefetch_related('perguntas').all()
-            print(secoes)
-            dados_questionario = []
 
-            for secao in secoes:
-                perguntas = secao.perguntas.all()
+            modulos = Modulo.objects.prefetch_related('dimensoes__perguntas').all()
+
+            dadosQuestionario = []
+
+            for modulo in modulos:
+                dimensoesDoModulo = modulo.dimensoes.all()
+                dadosDimensoes = []
+
+                for dimensao in dimensoesDoModulo:
+                    perguntas = dimensao.perguntas.all()
+                    
+                    dadosDimensao = {
+                        'dimensaoTitulo': dimensao.titulo,
+                        'descricao': dimensao.descricao,
+                        'tipo': dimensao.get_tipo_display(),
+                        'perguntas': [
+                            {   
+                                'id': p.id,
+                                'pergunta': p.pergunta,
+                                'explicacao': p.explicacao,
+                            } for p in perguntas
+                        ]
+                    }
+                    dadosDimensoes.append(dadosDimensao)
                 
-                dados_secao = {
-                    'secao_titulo': secao.titulo,
-                    'descricao': secao.descricao,
-                    'tipo': secao.get_tipo_display(),
-                    'perguntas': [
-                        {
-                            'id_na_secao': p.id_secao,
-                            'pergunta': p.pergunta,
-                            'explicacao': p.explicacao,
-                        } for p in perguntas
-                    ]
+                dadosModulo = {
+                    'nome': modulo.nome,
+                    'descricao': modulo.descricao,
+                    'tempo': modulo.tempo, 
+                    'perguntasQntd': modulo.perguntasQntd,
+                    'dimensoes': dadosDimensoes
                 }
-                dados_questionario.append(dados_secao)
+                dadosQuestionario.append(dadosModulo)
             
-            return Response({'secoes': dados_questionario})
+            return Response({'modulos': dadosQuestionario})
         
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class EnviarRespostasView(APIView):
+class SalvarRespostasModuloView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
     @transaction.atomic
-    def post(self, request):
-        try:
-            data = request.data
-            usuario_id = data.get('usuario_id')
-            respostas = data.get('respostas')
-            
-            if not usuario_id or not respostas:
-                return Response({'error': 'Dados incompletos'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            usuario = Usuario.objects.get(pk=usuario_id)
-            resultados = []
-            
-            for secao_id, perguntas_respostas in respostas.items():
-                secao = Secao.objects.get(titulo=secao_id)
-                valor_final = 0
-                
-                resposta_secao, created = RespostaSecao.objects.get_or_create(
-                    usuario=usuario,
-                    secao=secao
-                )
-                
-                for pergunta_id, valor in perguntas_respostas.items():
-                    valor = int(valor)
-                    if not 1 <= valor <= 5:
-                        return Response(
-                            {'error': f'Valor {valor} fora da escala Likert (1-5)'},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    
-                    pergunta = Pergunta.objects.get(pk=pergunta_id)
-                    
-                    RespostaPergunta.objects.update_or_create(
-                        resposta_secao=resposta_secao,
-                        pergunta=pergunta,
-                        defaults={'valor': valor}
-                    )
-                    
-                    valor_final += valor
-                
-                resposta_secao.valor_final = valor_final
-                resposta_secao.save()
-                
-                resultados.append({
-                    'secao_id': secao.titulo,
-                    'valor_final': valor_final,
-                    'status': 'atualizado' if not created else 'criado'
-                })
-            
-            return Response({
-                'success': True,
-                'resultados': resultados
-            })
-        
-        except Usuario.DoesNotExist:
-            return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
-        except Secao.DoesNotExist:
-            return Response({'error': 'Seção não encontrada'}, status=status.HTTP_404_NOT_FOUND)
-        except Pergunta.DoesNotExist:
-            return Response({'error': 'Pergunta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def post(self, request, modulo_nome):
+        usuario = request.user
+        modulo = get_object_or_404(Modulo, nome=modulo_nome)
 
-class ResultadosUsuarioView(APIView):
-    def get(self, request, usuario_id):
+        respostas_data = request.data.get('respostas')
+
+        if not respostas_data:
+            return Response(
+                {'error': 'Payload deve conter a chave "respostas" com uma lista de respostas.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not isinstance(respostas_data, list):
+             return Response(
+                {'error': '"respostas" deve ser uma lista.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        respostas_processadas = []
+        erros = []
+        perguntas_respondidas_ids = set()
+        dimensoes_envolvidas = {}
+
         try:
-            usuario = Usuario.objects.get(pk=usuario_id)
-            respostas = RespostaSecao.objects.filter(usuario=usuario).select_related('secao')
-            
-            resultados = [
-                {
-                    'secao_id': r.secao.titulo,
-                    'secao_titulo': r.secao.titulo,
-                    'valor_final': r.valor_final,
-                    'data_resposta': r.data_resposta
-                } for r in respostas
-            ]
-            
-            return Response({'resultados': resultados})
-        
-        except Usuario.DoesNotExist:
-            return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            ids_perguntas_enviadas = [r.get('pergunta_id') for r in respostas_data if r.get('pergunta_id') is not None]
+
+            perguntas_do_modulo = Pergunta.objects.filter(
+                dimensao__modulo=modulo
+            ).select_related('dimensao')
+
+            mapa_perguntas_validas = {p.id: p for p in perguntas_do_modulo}
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+             return Response(
+                {'error': f'Erro ao buscar perguntas do módulo: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        for idx, resposta_info in enumerate(respostas_data):
+            pergunta_id = resposta_info.get('pergunta_id')
+            valor = resposta_info.get('valor')
+
+            if pergunta_id is None or valor is None:
+                erros.append(f"Item {idx+1}: Faltando 'pergunta_id' ou 'valor'.")
+                continue
+            try:
+                valor = int(valor)
+            except (ValueError, TypeError):
+                erros.append(f"Item {idx+1} (Pergunta ID {pergunta_id}): 'valor' deve ser um número inteiro.")
+                continue
+
+            pergunta_obj = mapa_perguntas_validas.get(pergunta_id)
+            if not pergunta_obj:
+                erros.append(f"Item {idx+1}: Pergunta com ID {pergunta_id} não encontrada ou não pertence ao módulo '{modulo_nome}'.")
+                continue
+
+            if pergunta_id in perguntas_respondidas_ids:
+                 erros.append(f"Item {idx+1}: Resposta duplicada para a pergunta com ID {pergunta_id} nesta requisição.")
+                 continue
+            perguntas_respondidas_ids.add(pergunta_id)
+
+            try:
+                dimensao_obj = pergunta_obj.dimensao
+                dimensao_pk = dimensao_obj.pk
+
+                if dimensao_pk not in dimensoes_envolvidas:
+                    resposta_dimensao_obj, created_rd = RespostaDimensao.objects.update_or_create(
+                        usuario=usuario,
+                        dimensao=dimensao_obj,
+                        defaults={'valorFinal': 0}
+                    )
+                    dimensoes_envolvidas[dimensao_pk] = resposta_dimensao_obj
+                else:
+                    resposta_dimensao_obj = dimensoes_envolvidas[dimensao_pk]
+
+                resposta_pergunta_obj, created_rp = RespostaPergunta.objects.update_or_create(
+                    respostaDimensao=resposta_dimensao_obj,
+                    pergunta=pergunta_obj,
+                    defaults={'valor': valor}
+                )
+                respostas_processadas.append({
+                    'pergunta_id': pergunta_id,
+                    'valor_salvo': valor,
+                    'status': 'Criada' if created_rp else 'Atualizada'
+                })
+
+            except Exception as e:
+                erros.append(f"Item {idx+1} (Pergunta ID {pergunta_id}): Erro ao salvar no banco de dados - {str(e)}")
+
+        if erros:
+            return Response({
+                'error': 'Falha ao processar algumas respostas.',
+                'detalhes': erros,
+                'respostas_salvas_antes_do_erro': respostas_processadas 
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(
+                {'message': f'Respostas para o módulo "{modulo_nome}" salvas com sucesso.', 'detalhes': respostas_processadas},
+                status=status.HTTP_201_CREATED
+            )

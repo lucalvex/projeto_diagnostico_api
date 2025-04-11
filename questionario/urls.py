@@ -1,12 +1,10 @@
 from django.urls import path
 from .views import (
     QuestionarioView,
-    EnviarRespostasView,
-    ResultadosUsuarioView
+    SalvarRespostasModuloView,
 )
 
 urlpatterns = [
     path('questionario/', QuestionarioView.as_view(), name='obter-questionario'),
-    path('respostas/', EnviarRespostasView.as_view(), name='enviar-respostas'),
-    path('resultados/<int:usuario_id>/', ResultadosUsuarioView.as_view(), name='resultados-usuario'),
+    path('modulos/<str:modulo_nome>/respostas/', SalvarRespostasModuloView.as_view(), name='salvar_respostas_modulo'),
 ]
