@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.http import JsonResponse
 from users.models import UserAccount
-from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaPergunta
+from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from django.shortcuts import get_object_or_404
 import json
 
@@ -24,19 +24,11 @@ class QuestionarioView(APIView):
                 dadosDimensoes = []
 
                 for dimensao in dimensoesDoModulo:
-                    perguntas = dimensao.perguntas.all()
                     
                     dadosDimensao = {
                         'dimensaoTitulo': dimensao.titulo,
                         'descricao': dimensao.descricao,
                         'tipo': dimensao.get_tipo_display(),
-                        'perguntas': [
-                            {   
-                                'id': p.id,
-                                'pergunta': p.pergunta,
-                                'explicacao': p.explicacao,
-                            } for p in perguntas
-                        ]
                     }
                     dadosDimensoes.append(dadosDimensao)
                 
@@ -54,107 +46,179 @@ class QuestionarioView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class SalvarRespostasModuloView(APIView):
+class ModuloView(APIView):
+    permission_classes = [AllowAny]
 
+    def get(self, request, nomeModulo):
+        try:
+            moduloObj = get_object_or_404(
+                Modulo.objects.prefetch_related('dimensoes__perguntas'),
+                nome=nomeModulo
+            )
+
+            dadosDimensoes = []
+
+            for dimensao in moduloObj.dimensoes.all():
+                perguntasData = []
+                for p in dimensao.perguntas.all():
+                    perguntasData.append({
+                        'id': p.id,
+                        'pergunta': p.pergunta,
+                        'explicacao': p.explicacao,
+                    })
+
+                dados_dimensao = {
+                    'dimensaoTitulo': dimensao.titulo,
+                    'descricao': dimensao.descricao,
+                    'tipo': dimensao.get_tipo_display(),
+                    'perguntas': perguntasData
+                }
+                dadosDimensoes.append(dados_dimensao)
+
+            response_data = {
+                'nomeModulo': moduloObj.nome,
+                'dimensoes': dadosDimensoes
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Ocorreu um erro interno no servidor: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class SalvarRespostasModuloView(APIView):
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
-    def post(self, request, modulo_nome):
+    def post(self, request, nomeModulo):
         usuario = request.user
-        modulo = get_object_or_404(Modulo, nome=modulo_nome)
+        try:
+            modulo = get_object_or_404(Modulo, nome=nomeModulo)
+        except Modulo.DoesNotExist:
+             return Response(
+                {'error': f'Módulo com nome "{nomeModulo}" não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+             )
 
-        respostas_data = request.data.get('respostas')
+        respostasData = request.data.get('respostas')
 
-        if not respostas_data:
+        if respostasData is None:
             return Response(
-                {'error': 'Payload deve conter a chave "respostas" com uma lista de respostas.'},
+                {'error': 'Payload deve conter a chave "respostas".'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        if not isinstance(respostas_data, list):
+        if not isinstance(respostasData, list):
              return Response(
                 {'error': '"respostas" deve ser uma lista.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if not respostasData:
+             return Response(
+                {'warning': 'A lista "respostas" está vazia. Nenhuma resposta foi processada.'},
+                status=status.HTTP_200_OK
+            )
 
-        respostas_processadas = []
         erros = []
-        perguntas_respondidas_ids = set()
-        dimensoes_envolvidas = {}
+        perguntasRespondidasId = set()
+        somasPorDimensao = {}
 
         try:
-            ids_perguntas_enviadas = [r.get('pergunta_id') for r in respostas_data if r.get('pergunta_id') is not None]
-
-            perguntas_do_modulo = Pergunta.objects.filter(
+            perguntasDoModulo = Pergunta.objects.filter(
                 dimensao__modulo=modulo
             ).select_related('dimensao')
-
-            mapa_perguntas_validas = {p.id: p for p in perguntas_do_modulo}
-
+            mapa_perguntas_validas = {p.id: p for p in perguntasDoModulo}
         except Exception as e:
              return Response(
-                {'error': f'Erro ao buscar perguntas do módulo: {str(e)}'},
+                {'error': f'Erro crítico ao buscar perguntas do módulo: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        for idx, resposta_info in enumerate(respostas_data):
-            pergunta_id = resposta_info.get('pergunta_id')
+        for idx, resposta_info in enumerate(respostasData):
+            if not isinstance(resposta_info, dict):
+                erros.append(f"Item {idx+1}: Não é um objeto JSON válido.")
+                continue
+
+            perguntaId = resposta_info.get('perguntaId')
             valor = resposta_info.get('valor')
 
-            if pergunta_id is None or valor is None:
-                erros.append(f"Item {idx+1}: Faltando 'pergunta_id' ou 'valor'.")
+            if perguntaId is None:
+                erros.append(f"Item {idx+1}: Chave 'perguntaId' ausente.")
                 continue
+            if valor is None:
+                erros.append(f"Item {idx+1} (Pergunta ID {perguntaId}): Chave 'valor' ausente.")
+                continue
+
             try:
-                valor = int(valor)
+                valor_int = int(valor)
             except (ValueError, TypeError):
-                erros.append(f"Item {idx+1} (Pergunta ID {pergunta_id}): 'valor' deve ser um número inteiro.")
+                erros.append(f"Item {idx+1} (Pergunta ID {perguntaId}): 'valor' deve ser um número inteiro (recebeu '{valor}').")
                 continue
 
-            pergunta_obj = mapa_perguntas_validas.get(pergunta_id)
-            if not pergunta_obj:
-                erros.append(f"Item {idx+1}: Pergunta com ID {pergunta_id} não encontrada ou não pertence ao módulo '{modulo_nome}'.")
+            perguntaObj = mapa_perguntas_validas.get(perguntaId)
+            if not perguntaObj:
+                erros.append(f"Item {idx+1}: Pergunta com ID {perguntaId} não encontrada ou não pertence ao módulo '{nomeModulo}'.")
                 continue
 
-            if pergunta_id in perguntas_respondidas_ids:
-                 erros.append(f"Item {idx+1}: Resposta duplicada para a pergunta com ID {pergunta_id} nesta requisição.")
+            if perguntaId in perguntasRespondidasId:
+                 erros.append(f"Item {idx+1}: Resposta duplicada para a pergunta com ID {perguntaId} nesta requisição.")
                  continue
-            perguntas_respondidas_ids.add(pergunta_id)
+            perguntasRespondidasId.add(perguntaId)
 
-            try:
-                dimensao_obj = pergunta_obj.dimensao
-                dimensao_pk = dimensao_obj.pk
-
-                if dimensao_pk not in dimensoes_envolvidas:
-                    resposta_dimensao_obj, created_rd = RespostaDimensao.objects.update_or_create(
-                        usuario=usuario,
-                        dimensao=dimensao_obj,
-                        defaults={'valorFinal': 0}
-                    )
-                    dimensoes_envolvidas[dimensao_pk] = resposta_dimensao_obj
-                else:
-                    resposta_dimensao_obj = dimensoes_envolvidas[dimensao_pk]
-
-                resposta_pergunta_obj, created_rp = RespostaPergunta.objects.update_or_create(
-                    respostaDimensao=resposta_dimensao_obj,
-                    pergunta=pergunta_obj,
-                    defaults={'valor': valor}
-                )
-                respostas_processadas.append({
-                    'pergunta_id': pergunta_id,
-                    'valor_salvo': valor,
-                    'status': 'Criada' if created_rp else 'Atualizada'
-                })
-
-            except Exception as e:
-                erros.append(f"Item {idx+1} (Pergunta ID {pergunta_id}): Erro ao salvar no banco de dados - {str(e)}")
+            dimensaoObj = perguntaObj.dimensao
+            dimensaoPk = dimensaoObj.pk
+            somasPorDimensao[dimensaoPk] = somasPorDimensao.get(dimensaoPk, 0) + valor_int
 
         if erros:
             return Response({
-                'error': 'Falha ao processar algumas respostas.',
+                'error': 'Falha na validação das respostas. Nenhuma resposta foi salva.',
                 'detalhes': erros,
-                'respostas_salvas_antes_do_erro': respostas_processadas 
                 }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(
-                {'message': f'Respostas para o módulo "{modulo_nome}" salvas com sucesso.', 'detalhes': respostas_processadas},
-                status=status.HTTP_201_CREATED
+
+        dimensoesAtualizadas = []
+        respostaModuloStatus = None
+        valorFinalModulo = 0 
+
+        try:
+            for dimensaoPk, somaTotal in somasPorDimensao.items():
+                respostaDimensaoObj, created = RespostaDimensao.objects.update_or_create(
+                    usuario=usuario,
+                    dimensao_id=dimensaoPk,
+                    defaults={'valorFinal': somaTotal}
+                )
+                dimensoesAtualizadas.append({
+                    'dimensaoId': dimensaoPk,
+                    'tituloDimensao': respostaDimensaoObj.dimensao.titulo,
+                    'valorFinal': somaTotal,
+                    'status': 'Criada' if created else 'Atualizada'
+                })
+
+            valorFinalModulo = sum(somasPorDimensao.values())
+
+            respostaModuloObj, created_modulo = RespostaModulo.objects.update_or_create(
+                usuario=usuario,
+                modulo=modulo,
+                defaults={'valorFinal': valorFinalModulo}
             )
+            respostaModuloStatus = 'Criada' if created_modulo else 'Atualizada'
+
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao salvar respostas no banco de dados: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {
+                'message': f'Respostas para o módulo "{nomeModulo}" processadas e salvas com sucesso.',
+                'modulo': {
+                    'moduloId': modulo.id,
+                    'nomeModulo': modulo.nome,
+                    'valorFinal': valorFinalModulo,
+                    'status': respostaModuloStatus
+                },
+                'dimensoesAtualizadas': dimensoesAtualizadas
+            },
+            status=status.HTTP_200_OK
+        )

@@ -18,6 +18,16 @@ class Modulo(models.Model):
     def __str__(self):
         return self.nome
 
+class RespostaModulo(models.Model):
+    usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='respostas', default=None)
+    valorFinal = models.IntegerField(default=0)
+    dataResposta = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('usuario', 'modulo')
+        verbose_name_plural = 'Respostas dos Módulos'
+
 class Dimensao(models.Model):
     TIPO_CHOICES = [
         ('OBRIGATORIO', 'Obrigatório'),
@@ -50,12 +60,3 @@ class Pergunta(models.Model):
     pergunta = models.TextField()
     explicacao = models.TextField(blank=True)
     dimensao = models.ForeignKey(Dimensao, on_delete=models.CASCADE, related_name='perguntas', default=None)
-
-class RespostaPergunta(models.Model):
-    respostaDimensao = models.ForeignKey(RespostaDimensao, on_delete=models.CASCADE, related_name='respostas', default=None)
-    pergunta = models.ForeignKey(Pergunta, on_delete=models.CASCADE)
-    valor = models.IntegerField()
-    
-    class Meta:
-        unique_together = ('respostaDimensao', 'pergunta')
-        verbose_name_plural = 'Respostas das Perguntas'
