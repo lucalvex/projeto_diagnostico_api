@@ -54,7 +54,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'cnpj', 'cpf']
+    REQUIRED_FIELDS = ['nomeDeUsuario', 'cnpj', 'cpf']
 
     def __str__(self):
         return self.email
