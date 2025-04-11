@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'djoser',
     'users',
     'corsheaders',
+    'questionario',
 ]
 
 MIDDLEWARE = [
