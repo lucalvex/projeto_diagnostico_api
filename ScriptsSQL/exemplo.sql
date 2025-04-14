@@ -101,12 +101,26 @@ INSERT INTO users_useraccount (
 
 -- Questionario
 
-INSERT INTO questionario_secao (titulo, descricao, tipo) VALUES
-('Estratégia Empresarial', 'Avalie as questões referentes à ESTRATÉGIA EMPRESARIAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO'),
-('Estrutura Organizacional', 'Avalie as questões referentes à ESTRUTURA ORGANIZACIONAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO'),
-('Gestão Industrial', 'Avalie as questões referentes à GESTÃO INDUSTRIAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'INDUSTRIA');
+INSERT INTO questionario_modulo (nome, perguntasQntd, descricao, tempo) VALUES
+('Diagnóstico Organizacional', 0, 'O presente formulário é destinado a micro e pequenas empresas que pretendem realizar um diagnóstico de sua situação empresarial. Não há respostas certas ou erradas, as perguntas devem ser respondidas com sinceridade para maior precisão do resultado. O formulário está estruturado em 7 dimensões e o tempo previsto de preenchimento é de 5 minutos.', 0);
 
-INSERT INTO questionario_pergunta (secao_id, pergunta, explicacao) VALUES
-('Estratégia Empresarial', 'A empresa possui objetivos de longo prazo (mais de 1 ano).', 'Explicacao'),
-('Estrutura Organizacional', 'As tarefas na empresa são claras e de conhecimento de toda a equipe.', 'Explicacao'),
-('Gestão Industrial', 'A empresa tem um bom controle de estoque.', 'Explicacao');
+INSERT INTO questionario_dimensao (titulo, descricao, tipo, modulo_id) VALUES
+('Estratégia Empresarial', 'Avalie as questões referentes à ESTRATÉGIA EMPRESARIAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('Estrutura Organizacional', 'Avalie as questões referentes à ESTRUTURA ORGANIZACIONAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('Gestão de Marketing', 'Avalie as questões referentes à GESTÃO DE MARKETING da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('Gestão Financeira', 'Avalie as questões referentes à GESTÃO FINANCEIRA da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('Gestão de Pessoas', 'Avalie as questões referentes à GESTÃO DE PESSOAS da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('ESG', 'Avalie as questões referentes às políticas ESG (Ambiental, Social e Governança) da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'OBRIGATORIO', 1),
+('Gestão Comercial', 'Avalie as questões referentes à GESTÃO COMERCIAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'COMERCIO', 1),
+('Gestão Industrial', 'Avalie as questões referentes à GESTÃO INDUSTRIAL da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'INDUSTRIA', 1),
+('Prestação de Serviços', 'Avalie as questões referentes à Prestação de Serviços da sua empresa, indicando em uma escala de concordância de 1 a 5 onde 1 significa discordo totalmente e 5 significa concordo totalmente.', 'SERVICO', 1);
+
+INSERT INTO questionario_pergunta (pergunta, explicacao, dimensao_id) VALUES
+('As tarefas na empresa são claras e de conhecimento de toda a equipe.', 'explicacao', 1);
+
+INSERT INTO questionario_pergunta (pergunta, explicacao, dimensao_id) VALUES
+('As tarefas na empresa são claras e de conhecimento de toda a equipe.', 'explicacao', 2),
+('Os processos dentro da empresa estão bem definidos.', 'explicacao', 2),
+('As funções das pessoas e equipes dentro da sua empresa estão bem-organizadas.', 'explicacao', 2),
+('Sua empresa possui uma clara organização e estruturação interna.', 'explicacao', 2),
+('As atividades na empresa possuem um bom fluxo de trabalho.', 'explicacao', 2);
