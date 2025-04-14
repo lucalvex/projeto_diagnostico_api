@@ -78,15 +78,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'NOME DO BANCO',
-        'USER': 'USUARIO',
-        'PASSWORD': 'SENHA',
-        'HOST': 'localhost', # ou o IP do servidor
-        'PORT': 'PORTA',
+        'ENGINE': getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': getenv('DB_NAME', BASE_DIR / 'db.sqlite3') if getenv('DB_ENGINE') else BASE_DIR / 'db.sqlite3',
+        'USER': getenv('DB_USER', ''),
+        'PASSWORD': getenv('DB_PASSWORD', ''),
+        'HOST': getenv('DB_HOST', ''),
+        'PORT': getenv('DB_PORT', ''),
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        }
+            'init_command': getenv('DB_INIT_COMMAND', None),
+        } if getenv('DB_ENGINE') else {},
     }
 }
 
