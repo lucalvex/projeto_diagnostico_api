@@ -19,21 +19,22 @@ class Migration(migrations.Migration):
         migrations.RenameField(
             model_name='useraccount',
             old_name='username',
-            new_name='nomeDeUsuario',
+            new_name='username',
         ),
         migrations.AddField(
             model_name='useraccount',
             name='cpf',
-            field=models.CharField(default='00000000000', max_length=14, unique=True),
+            field=models.CharField(default='00000000000',
+                                   max_length=14, unique=True),
         ),
         migrations.AddField(
             model_name='useraccount',
-            name='dataDesativacao',
+            name='deactivation_date',
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='useraccount',
-            name='dataRegistro',
+            name='registration_date',
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.AlterField(

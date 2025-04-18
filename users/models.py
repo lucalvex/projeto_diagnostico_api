@@ -39,27 +39,28 @@ class UserAccountManager(BaseUserManager):
 
 
 class UserAccount(AbstractBaseUser, PermissionsMixin):
-    nomeDeUsuario = models.CharField(max_length=255, unique=True)
+    username = models.CharField(max_length=255, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     cnpj = BRCNPJField(max_length=14, unique=True)
     cpf = models.CharField(max_length=14, unique=True, default="00000000000")
     password = models.CharField(max_length=255)
-    isActive = models.BooleanField(default=True)
-    dataRegistro = models.DateTimeField(default=timezone.now)
-    dataDesativacao = models.DateTimeField(null=True, blank=True)
 
+    registration_date = models.DateTimeField(default=timezone.now)
+    deactivation_date = models.DateTimeField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
 
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nomeDeUsuario', 'cnpj', 'cpf']
+    REQUIRED_FIELDS = ['username', 'cnpj']
 
     def __str__(self):
         return self.email
 
     def save(self, *args, **kwargs):
-        if not self.isActive and not self.dataDesativacao:
-            self.dataDesativacao = timezone.now()
+        if not self.is_active and not self.deactivation_date:
+            self.deactivation_date = timezone.now()
         super().save(*args, **kwargs)
