@@ -1,3 +1,10 @@
+import io
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch, cm
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, Spacer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -232,3 +239,149 @@ class SalvarRespostasModuloView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+class GerarRelatorioModuloView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _avaliar_modulo(self, pontuacao):
+        if 142 <= pontuacao <= 175:
+            return "Excelente"
+        elif 106 <= pontuacao <= 141:
+            return "Ótimo"
+        elif 71 <= pontuacao <= 105:
+            return "Médio"
+        elif 35 <= pontuacao <= 70:
+            return "Insuficiente"
+        else:
+            return "Fora da faixa de avaliação"
+
+    def _avaliar_dimensao(self, pontuacao):
+        if 21 <= pontuacao <= 25:
+            return "Excelente"
+        elif 16 <= pontuacao <= 20:
+            return "Ótimo"
+        elif 11 <= pontuacao <= 15:
+            return "Médio"
+        elif 5 <= pontuacao <= 10:
+            return "Insuficiente"
+        else:
+            return "Fora da faixa de avaliação"
+
+    def get(self, request, nomeModulo):
+        usuario = request.user
+
+        try:
+            modulo = get_object_or_404(Modulo, nome=nomeModulo)
+
+            resposta_modulo = get_object_or_404(
+                RespostaModulo, usuario=usuario, modulo=modulo
+            )
+
+            respostas_dimensoes = RespostaDimensao.objects.filter(
+                usuario=usuario,
+                dimensao__modulo=modulo
+            ).select_related('dimensao').order_by('dimensao__titulo')
+
+            if not respostas_dimensoes.exists():
+                 return Response(
+                     {'error': f'Respostas das dimensões para o módulo "{nomeModulo}" não encontradas para este usuário.'},
+                     status=status.HTTP_404_NOT_FOUND
+                 )
+
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            styles = getSampleStyleSheet()
+            width, height = A4
+
+            y_position = height - 1.5*cm
+            margin_left = 1.5*cm
+            content_width = width - 2*margin_left
+
+            style_title = styles['h1']
+            style_h2 = styles['h2']
+            style_body = styles['BodyText']
+            style_body.leading = 14
+
+            p = Paragraph("Relatório de Desempenho", style_title)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.5*cm)
+
+            p = Paragraph(f"<b>Usuário:</b> {usuario.username} ({usuario.email})", style_body)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.2*cm)
+
+            p = Paragraph(f"<b>Módulo:</b> {modulo.nome}", style_h2)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.1*cm)
+
+            p = Paragraph(f"<i>Descrição:</i> {modulo.descricao}", style_body)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.5*cm)
+
+            pontuacao_modulo = resposta_modulo.valorFinal
+            avaliacao_modulo = self._avaliar_modulo(pontuacao_modulo)
+            p = Paragraph(f"<b>Resultado Geral do Módulo:</b> {pontuacao_modulo} pontos - <b>{avaliacao_modulo}</b>", style_body)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.7*cm)
+
+            p = Paragraph("Resultados por Dimensão:", style_h2)
+            p.wrapOn(c, content_width, height)
+            p_height = p.height
+            p.drawOn(c, margin_left, y_position - p_height)
+            y_position -= (p_height + 0.3*cm)
+
+            for resp_dim in respostas_dimensoes:
+                dimensao = resp_dim.dimensao
+                pontuacao_dimensao = resp_dim.valorFinal
+                avaliacao_dimensao = self._avaliar_dimensao(pontuacao_dimensao)
+
+                p = Paragraph(f"<b>{dimensao.titulo}:</b>", style_body)
+                p.wrapOn(c, content_width, height)
+                p_height = p.height
+                p.drawOn(c, margin_left, y_position - p_height)
+                y_position -= p_height
+
+                p = Paragraph(f"    Pontuação: {pontuacao_dimensao} - <b>{avaliacao_dimensao}</b>", style_body)
+                p.wrapOn(c, content_width, height)
+                p_height = p.height
+                p.drawOn(c, margin_left, y_position - p_height)
+                y_position -= (p_height + 0.3*cm)
+
+                if y_position < 3*cm:
+                    c.showPage() 
+                    y_position = height - 1.5*cm
+
+            c.save()
+
+            buffer.seek(0)
+            response = HttpResponse(buffer, content_type='application/pdf')
+            filename = f"relatorio_{nomeModulo.replace(' ', '_')}_{usuario.username}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            return response
+
+        except Modulo.DoesNotExist:
+            return Response(
+                {'error': f'Módulo com nome "{nomeModulo}" não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except RespostaModulo.DoesNotExist:
+             return Response(
+                {'error': f'O usuário {usuario.username} ainda não respondeu ao módulo "{nomeModulo}".'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erro ao gerar o relatório PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
