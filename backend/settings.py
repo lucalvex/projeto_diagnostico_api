@@ -1,14 +1,15 @@
-from os import getenv, path
+import os
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 import dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 dotenv_file = BASE_DIR / '.env.local'
 
-if path.isfile(dotenv_file):
+if os.path.isfile(dotenv_file):
     dotenv.load_dotenv(dotenv_file)
 
 
@@ -16,12 +17,12 @@ if path.isfile(dotenv_file):
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = getenv('DJANGO_SECRET_KEY', get_random_secret_key())
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = getenv("DJANGO_ALLOWED_HOSTS",
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS",
                        "127.0.0.1,localhost").split(",")
 
 
@@ -75,19 +76,8 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-        'ENGINE': getenv('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': getenv('DB_NAME', BASE_DIR / 'db.sqlite3') if getenv('DB_ENGINE') else BASE_DIR / 'db.sqlite3',
-        'USER': getenv('DB_USER', ''),
-        'PASSWORD': getenv('DB_PASSWORD', ''),
-        'HOST': getenv('DB_HOST', ''),
-        'PORT': getenv('DB_PORT', ''),
-        'OPTIONS': {
-            'init_command': getenv('DB_INIT_COMMAND', None),
-        } if getenv('DB_ENGINE') else {},
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
 
@@ -151,12 +141,12 @@ DJOSER = {
 AUTH_COOKIE = 'access'
 AUTH_COOKIE_ACCESS_MAX_AGE = 60 * 5
 AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24
-AUTH_COOKIE_SECURE = getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
+AUTH_COOKIE_SECURE = os.getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
 AUTH_COOKIE_SAMESITE = 'Lax'
 
-CORS_ALLOWED_ORIGINS = getenv(
+CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000, '
     'https://127.0.0.1:3000'
@@ -173,11 +163,11 @@ AUTH_USER_MODEL = "users.UserAccount"
 # Email settings
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = getenv('EMAIL_PORT', 587)
-EMAIL_USE_TLS = getenv('EMAIL_USE_TLS', True)
-EMAIL_HOST_USER = getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = getenv('EMAIL_HOST_PASSWORD')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', True)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
-DOMAIN = getenv('DOMAIN', 'http://localhost:8000')
+DOMAIN = os.getenv('DOMAIN', 'http://localhost:8000')
 SITE_NAME = 'Projeto Diagnóstico'
