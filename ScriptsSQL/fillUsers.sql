@@ -4,7 +4,7 @@ INSERT INTO users_useraccount (
     cnpj, 
     cpf, 
     password, 
-    isActive, 
+    is_active, 
     registration_date, 
     deactivation_date, 
     is_staff, 
