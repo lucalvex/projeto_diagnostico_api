@@ -152,7 +152,6 @@ CORS_ALLOWED_ORIGINS = os.getenv(
     'https://127.0.0.1:3000'
     "https://projeto-diagnostico-frontend.onrender.com/",  
 ).split(",")
-CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Default primary key field type
