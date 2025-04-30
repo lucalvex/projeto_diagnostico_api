@@ -160,8 +160,10 @@ CORS_ALLOWED_ORIGINS = getenv(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:3000, '
     'https://127.0.0.1:3000'
+    "https://projeto-diagnostico-frontend.onrender.com/",  
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
