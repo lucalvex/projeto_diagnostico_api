@@ -148,7 +148,7 @@ AUTH_COOKIE_SAMESITE = 'Lax'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",          # se estiver desenvolvendo localmente
-    "https://projeto-diagnostico-frontend.onrender.com/",       # produção (ajuste conforme o domínio real)
+    "https://projeto-diagnostico-frontend.onrender.com",       # produção (ajuste conforme o domínio real)
 ]
 
 CORS_ALLOW_CREDENTIALS = True 
