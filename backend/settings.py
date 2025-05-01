@@ -146,13 +146,12 @@ AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
 AUTH_COOKIE_SAMESITE = 'Lax'
 
-CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv(
-        'CORS_ALLOWED_ORIGINS',
-        'https://projeto-diagnostico-frontend.onrender.com'
-    ).split(',')
+    "http://localhost:3000",          # se estiver desenvolvendo localmente
+    "https://projeto-diagnostico-frontend.onrender.com/",       # produção (ajuste conforme o domínio real)
 ]
+
+CORS_ALLOW_CREDENTIALS = True 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
