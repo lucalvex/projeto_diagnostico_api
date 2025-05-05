@@ -136,6 +136,9 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
     'TOKEN_MODEL': None,
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.UserCreateSerializer',
+    }
 }
 
 AUTH_COOKIE = 'access'
