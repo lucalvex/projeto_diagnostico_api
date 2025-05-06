@@ -8,8 +8,15 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView
 )
+from django.contrib.auth.models import User 
 
+class UserListView(APIView):
+    def get(self, request, *args, **kwargs):
+        users = User.objects.all()  # Pegando todos os usuários
+        user_data = [{"username": user.username, "email": user.email} for user in users]  # Ajuste conforme necessário
 
+        return Response(user_data, status=status.HTTP_200_OK)
+    
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         print("Dados recebidos:", request.data)
