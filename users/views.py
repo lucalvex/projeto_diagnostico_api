@@ -9,7 +9,21 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView
 )
 from django.contrib.auth.models import User 
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
+def corrigir_senha(request):
+    User = get_user_model()
+    try:
+        user = User.objects.get(username='Lucas')
+        user.set_password('chocolate123')  # Define a senha corretamente
+        user.save()
+        return JsonResponse({'status': 'Senha corrigida com sucesso!'})
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Usuário não encontrado'}, status=404)
+    
 class UserListView(APIView):
     def get(self, request, *args, **kwargs):
         users = User.objects.all()  # Pegando todos os usuários
