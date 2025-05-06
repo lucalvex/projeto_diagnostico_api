@@ -147,10 +147,9 @@ AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24
 AUTH_COOKIE_SECURE = os.getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
-AUTH_COOKIE_SAMESITE = 'Lax'
+AUTH_COOKIE_SAMESITE = 'None'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",          # se estiver desenvolvendo localmente
     "https://projeto-diagnostico-frontend.onrender.com",       # produção (ajuste conforme o domínio real)
 ]
 
