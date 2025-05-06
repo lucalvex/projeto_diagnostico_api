@@ -153,7 +153,11 @@ CORS_ALLOWED_ORIGINS = [
     "https://projeto-diagnostico-frontend.onrender.com",       # produção (ajuste conforme o domínio real)
 ]
 
-CORS_ALLOW_CREDENTIALS = True 
+CORS_ALLOW_ALL_ORIGINS  = True 
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://projeto-diagnostico-api.onrender.com",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
