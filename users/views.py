@@ -12,6 +12,7 @@ from rest_framework_simplejwt.views import (
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
+        print("Dados recebidos:", request.data)
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
