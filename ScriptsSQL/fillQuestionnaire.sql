@@ -1,5 +1,5 @@
 
-INSERT INTO questionario_modulo (nome, perguntasQntd, descricao, tempo) VALUES
+INSERT INTO questionario_modulo (nome, perguntasqntd, descricao, tempo) VALUES
 ('Diagnóstico Organizacional', 0, 'O presente formulário é destinado a micro e pequenas empresas que pretendem realizar um diagnóstico de sua situação empresarial. Não há respostas certas ou erradas, as perguntas devem ser respondidas com sinceridade para maior precisão do resultado. O formulário está estruturado em 7 dimensões e o tempo previsto de preenchimento é de 5 minutos.', 0);
 
 INSERT INTO questionario_dimensao (titulo, descricao, tipo, modulo_id) VALUES

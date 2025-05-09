@@ -1,4 +1,4 @@
-from django.conf import settings
+from backend import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,10 +8,32 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView
 )
+from django.contrib.auth.models import User 
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
+def corrigir_senha(request):
+    User = get_user_model()
+    try:
+        user = User.objects.get(username='Lucas')
+        user.set_password('chocolate123')  # Define a senha corretamente
+        user.save()
+        return JsonResponse({'status': 'Senha corrigida com sucesso!'})
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Usuário não encontrado'}, status=404)
+    
+class UserListView(APIView):
+    def get(self, request, *args, **kwargs):
+        users = User.objects.all()  # Pegando todos os usuários
+        user_data = [{"username": user.username, "email": user.email} for user in users]  # Ajuste conforme necessário
 
+        return Response(user_data, status=status.HTTP_200_OK)
+    
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
+        print("Dados recebidos:", request.data)
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
@@ -20,7 +42,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             response.set_cookie(
                 'access',
-                access_token,
+                value=access_token,
                 max_age=settings.AUTH_COOKIE_ACCESS_MAX_AGE,
                 path=settings.AUTH_COOKIE_PATH,
                 secure=settings.AUTH_COOKIE_SECURE,

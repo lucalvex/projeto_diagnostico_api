@@ -136,6 +136,9 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
     'TOKEN_MODEL': None,
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.UserCreateSerializer',
+    }
 }
 
 AUTH_COOKIE = 'access'
@@ -144,14 +147,18 @@ AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24
 AUTH_COOKIE_SECURE = os.getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
-AUTH_COOKIE_SAMESITE = 'Lax'
+AUTH_COOKIE_SAMESITE = 'None'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",          # se estiver desenvolvendo localmente
     "https://projeto-diagnostico-frontend.onrender.com",       # produção (ajuste conforme o domínio real)
 ]
 
-CORS_ALLOW_CREDENTIALS = True 
+CORS_ALLOW_ALL_ORIGINS  = True 
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://projeto-diagnostico-api.onrender.com",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
